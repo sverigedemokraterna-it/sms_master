@@ -1,0 +1,46 @@
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: SD SMS Master\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-03-13 14:23+0100\n"
+"PO-Revision-Date: 2013-03-13 14:24+0100\n"
+"Last-Translator: Name\n"
+"Language-Team: Sverigedemokraterna <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-Language: Swedish\n"
+
+msgid "could not be sent"
+msgstr "kunde inte skickas"
+
+#, php-format
+msgid "This is an automatic delivery report for the SMS order placed %s. The text sent was:%s%s"
+msgstr "Detta är en automatiskt leveransrapport för SMS-utskicket som skapades %s. Texten som skickades var:%s%s"
+
+#, php-format
+msgid "The text could not be sent to the following %s numbers:%s%s"
+msgstr "Texten kunde inte skickas till följande %s nummer:%s%s"
+
+#, php-format
+msgid "The text was successfully sent to the following %s numbers:%s%s"
+msgstr "Meddelandet skickades till följande %s nummer:%s%s"
+
+msgid "Error messages from the phones:"
+msgstr "Felmeddelanden från telefonerna:"
+
+#, php-format
+msgid "Delivery report for the SMS order placed %s"
+msgstr "Leveransrapport för SMS-beställningen som skapades %s"
+
+msgid "**redacted**"
+msgstr "**borttaget**"
+
+msgid "No phones are configured"
+msgstr "Inga telefoner är inställda"
+
+msgid "No slaves are configured"
+msgstr "Inga slavar är inställda"
+

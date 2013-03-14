@@ -1,0 +1,12 @@
+PROJECT_NAME		= Sweden&nbsp;Democrats'&nbsp;SMS&nbsp;Master
+INPUT			= .
+
+ALIASES			+= "in=<p>Used as @b input from the client.</p>"
+ALIASES			+= "out=<p>Used as @b output back to the client.</p>"
+ALIASES			+= "smsm=SD SMS Master" 
+
+EXTRACT_ALL		= YES
+EXTRACT_PRIVATE		= YES
+GENERATE_HTML		= YES
+GENERATE_LATEX		= NO
+HTML_OUTPUT		= apidoc
