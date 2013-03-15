@@ -673,7 +673,7 @@ class SD_SMS_Master
 			$rv .= '
 				<tr>
 					<th>' . $this->_( 'Error log' ) . '</th>
-					<td>' . $order->error_log . '</td>
+					<td>' . $this->p( $order->error_log ) . '</td>
 				</tr>
 			';
 		
