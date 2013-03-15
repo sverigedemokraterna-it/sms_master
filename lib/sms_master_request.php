@@ -29,6 +29,7 @@ class SMS_Master_Request
 	**/
 	public function clean_1()
 	{
+		unset( $this->db );
 		unset( $this->sms_master );
 		if ( $this->error_message === null )
 			unset( $this->error_message );
@@ -36,6 +37,26 @@ class SMS_Master_Request
 		unset( $this->log );
 	}
 	
+	/**
+		@brief		Handles a command sent from the SMS Master.
+		
+		Should be overloaded.
+	**/
+	public function command()
+	{
+	}
+	
+	/**
+		@brief		Retrieves useful classes from the SMS Master. 
+	**/
+	public function construct( $SMS_Master )
+	{
+		$this->sms_master = $SMS_Master;
+		$this->db = $this->sms_master->db;
+		$this->loaded_user = $this->sms_master->loaded_user;
+		$this->log = $this->sms_master->log;
+	}
+
 	/**
 		@brief		Cleans up unused variables.
 		
@@ -56,7 +77,7 @@ class SMS_Master_Request
 			return false;
 		return $this->error_message;
 	}
-
+	
 	/**
 		@brief		Pre-handles ourself, so that the subclasses don't have to call the parent all the time.
 	**/

@@ -10,6 +10,12 @@ class SMS_Master_Curl
 	**/
 	public $curl;
 	
+	/**
+		@brief		The POST array as an object.
+		@var		$post
+	**/
+	public $post;
+	
 	public function __construct( $url, $POST )
 	{
 		$this->curl_init( $url, $POST );
@@ -35,6 +41,7 @@ class SMS_Master_Curl
 		
 		if ( $POST !== null )
 		{
+			$this->post = (object) $POST;
 			curl_setopt( $curl, CURLOPT_POST, 1 );				// Use POST method
 			curl_setopt( $curl, CURLOPT_POSTFIELDS, $POST );	// add POST fields
 		}

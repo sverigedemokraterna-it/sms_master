@@ -179,6 +179,10 @@ require_once ( 'class_sms_master_numbers.php' );
 	
 	@section	smsm_changelog					Changelog
 	
+	@par		x.x 2013-xx-xx
+	
+	- @b Fix: Phone statistics work again
+	
 	@par		1.0 2013-03-14
 	
 	Initial release.
@@ -232,6 +236,12 @@ class SMS_Master
 		@var		$log
 	**/
 	public $log;
+	
+	/**
+		@brief		The currently loaded user object from the database.
+		@var		@loaded_user
+	**/
+	public $loaded_user;
 
 	/**
 		@brief		Phone class.
@@ -253,7 +263,13 @@ class SMS_Master
 		@var		$slaves
 	**/
 	public $slaves;
-
+	
+	/**
+		@brief		Unix timestamp of when the server was started.
+		@var		$started
+	**/
+	public $started;
+	
 	/**
 		@brief		User handling class.
 		@see		class_SMS_Master_Users
@@ -280,6 +296,8 @@ class SMS_Master
 		$this->phones = new class_SMS_Master_Phones( $this );
 		$this->orders = new class_SMS_Master_Orders( $this );
 		$this->numbers = new class_SMS_Master_Numbers( $this );
+		
+		$this->started = time();
 	}
 	
 	/**
@@ -303,8 +321,7 @@ class SMS_Master
 		else
 			$nonce_seed = $array[ '_nonce_seed' ];
 		
-		unset( $array[ '_nonce' ] );
-		unset( $array[ '_nonce_seed' ] );
+		$array = $this->remove_nonce( $array );
 		
 		$string = serialize( $array );
 		
@@ -392,7 +409,10 @@ class SMS_Master
 		{
 			if ( ! $phone->clean )
 				continue;
-			$curls[] = $this->prepare_clean_phone( $phone );
+			$curls[] = $this->prepare_command( array(
+				'command' => 'SMS_Master_Clean_Phone_Request',
+				'phone_id' => $phone->phone_id,
+			) );
 		}
 		
 		if ( count( $curls ) < 1 )
@@ -417,9 +437,8 @@ class SMS_Master
 		foreach( $curls as $index => $curl )
 		{
 			$reply = curl_multi_getcontent( $curl->curl );
-			$reply = base64_decode( $reply );
 			$reply = @unserialize( $reply );
-			$clean_data[ $curl->phone['phone_id'] ] = $reply->output;
+			$clean_data[ $curl->post->phone_id ] = $reply->output;
 		}
 		
 		$this->send_cleaning_report( $clean_data );	
@@ -479,6 +498,32 @@ class SMS_Master
 	public function get_temp_filename( $prefix )
 	{
 		return tempnam( $this->config['temp_directory'], $prefix );
+	}
+	
+	/**
+		@brief		Handle a command.
+		
+		@param		array		$POST		The POST containing the command.
+	**/
+	public function handle_command( $POST )
+	{
+		$rv = '';
+		$classname = $POST[ 'command' ];
+		unset( $POST[ 'command' ] );
+		$POST = $this->remove_nonce( $POST );
+		
+		if ( class_exists( $classname ) )
+		{
+			$c = new $classname( $this );
+			$c->construct( $this );
+			foreach( $POST as $key => $value )
+				$c->$key = $value;
+			$c->command();
+			$c->clean_1();
+			$c->clean();
+			$rv = serialize( $c );
+		}
+		return $rv;
 	}
 	
 	/**
@@ -565,6 +610,9 @@ class SMS_Master
 	
 		if ( $user->enabled == 0 )
 			$this->error( 'User %s is inactive.', $container->public_key_id );
+			
+		// User is enabled and ready.
+		$this->loaded_user = $user;
 		
 		// Check the signature
 		$client_public_key = openssl_get_publickey( $user->public_key );
@@ -577,9 +625,7 @@ class SMS_Master
 			$this->error( 'Unable to unserialize the request.' );
 		
 		// Give the request some variables.
-		$container->request->sms_master = $this;
-		$container->request->log = $this->log;
-		$container->request->loaded_user = $user;
+		$container->request->construct( $this );
 		try
 		{
 			// Ask the request to handle itself.
@@ -616,10 +662,10 @@ class SMS_Master
 	{
 		$code = $reply->code;
 		
-		$order_id = $curl->order_id;
-		$phone_id = $curl->phone->phone_id;
-		$number_id = $curl->number->number_id;
-		 
+		$order_id = $curl->post->order_id;
+		$phone_id = $curl->post->phone_id;
+		$number_id = $curl->post->number_id;
+		
 		if ( $code !== 0 )
 		{
 			// 255 = no route to host, so don't count it as a failure.
@@ -629,9 +675,9 @@ class SMS_Master
 			}
 			else
 			{
-				$this->orders->log_error( $order_id, date('Y-m-d H:i:s ') . "\n\tPhone: " . $phone_id . "\n\tNumber: " . $curl->number->number . "\n\t" . implode("\n\t", $reply->output) . "\n" );
+				$number = $this->numbers->get( $number_id );
+				$this->orders->log_error( $order_id, date('Y-m-d H:i:s ') . "\n\tPhone: " . $phone_id . "\n\tNumber: " . $number->number . "\n\t" . implode("\n\t", $reply->output) . "\n" );
 				$this->numbers->increase_fails( $number_id );
-				$this->phones->untouch( $phone_id );
 			}
 		}
 		else
@@ -641,6 +687,7 @@ class SMS_Master
 			$this->phones->increase_sent_stats( $phone_id );
 			$this->phones->touch_successfully( $phone_id );
 		}
+		$this->phones->untouch( $phone_id );
 		$this->orders->maybe_complete( $order_id );
 	}
 	
@@ -718,6 +765,12 @@ class SMS_Master
 		
 		require_once( 'config.dist.php' );
 		require_once( 'config.local.php' );
+		
+		// Sanitize
+		
+		// The minimum amount of time to touch a phone is 5 seconds.
+		$config[ 'phone_touch_seconds' ] = max( 5, intval( $config[ 'phone_touch_seconds' ] ) );
+		
 		$this->config = $config;
 		
 		// Now go to the root
@@ -771,77 +824,45 @@ class SMS_Master
 	}
 	
 	/**
-		@brief		Prepares a phone cleaning request.
+		@brief		Prepares a CURL for sending a command back to the master.
 		
-		@param		object		$phone		A phone object (from phones->get).
-		@return		SMS_Master_Curl			A curl object.
+		The options must contain:
+		- @e command @b command The name of the SMS_Master_Request class to be created.
+		
+		@param		array		$options		Options to send.
+		@return		SMS_Master_Curl Object to use to multithread a CURL sending.
+		@see		SMS_Master_Request
 	**/
-	public function prepare_clean_phone( $phone )
+	public function prepare_command( $options )
 	{
-		// Touch them, to make then inaccessible for a while.
-		$this->phones->touch( $phone->phone_id );
-		
-		$url = $this->config['base_url'] . '/lib/command_clean_phone.php';
-		
-		$POST = array(
-			'phone_id' => $phone->phone_id,
-			'empty' => true,
-		);
-		
-		$POST = $this->add_nonce( $POST );
-		
-		$curl = new SMS_Master_Curl( $url, $POST );
-		$curl->phone = $phone;
-		
-		return $curl;
+		$url = $this->config['base_url'] . '/lib/command.php' . '?' . $options[ 'command' ];
+		$options = $this->add_nonce( $options );
+		return new SMS_Master_Curl( $url, $options );
 	}
 	
 	/**
-		@brief		Prepares a number and phone for sending.
+		@brief		Removes nonce keys from an array.
 		
-		@param		object		$number		A order number object.
-		@param		object		$phone		A phone object.
-		@return		SMS_Master_Curl			A curl object.
+		@param		array		$array		The array from which to remove nonce data.
+		@return		array		The array without the nonce data.
 	**/
-	public function prepare_send_text( $number, $phone )
+	public function remove_nonce( $array )
 	{
-		// Touch them, to make then inaccessible for a while.
-		$this->phones->touch( $phone->phone_id );
-		$this->numbers->touch( $number->number_id );
-		
-		$url = $this->config['base_url'] . '/lib/command_send_text.php';
-		
-		$POST = array(
-			'number_id' => $number->number_id,
-			'phone_id' => $phone->phone_id,
-		);
-		
-		$POST = $this->add_nonce( $POST );
-		
-		$curl = new SMS_Master_Curl( $url, $POST );
-		
-		$curl->order_id = $number->order_id;
-		$curl->number = $number;
-		$curl->phone = $phone;
-		
-		return $curl;
+		unset( $array[ '_nonce' ] );
+		unset( $array[ '_nonce_seed' ] );
+		return $array;
 	}
+	
 	
 	/**
 		@brief		Is a cron_type ready for cronning?
 		
 		@param		string		$cron_type		Type of cron to check.
-		@param		int			$seconds		Time between crons.
 	**/
-	public function ripe_for_cron( $cron_type, $seconds )
+	public function ripe_for_cron( $cron_type )
 	{
-		$last_cronned = intval( $this->settings->get( 'cron_' . $cron_type ) );
-	
-		$time = time();
-	
-		if ( $time < $last_cronned + $seconds )
-			return false;
-		return true;
+		$next_cron = intval( $this->settings->get( 'cron_' . $cron_type ) );
+		return time() > $next_cron;
 	}
 	
 	/**
@@ -872,6 +893,32 @@ class SMS_Master
 		$mail_data['body'] .= $this->config['email']['signature'];
 		
 		$this->send_mail( $mail_data );
+	}
+	
+	/**
+		@brief		Send a command back to the SMS Master.
+		
+		A command is a thinly-veiled SMS_Master_Request, in the form of a _POST array.
+		
+		Sending of a command:
+		
+		- In the options, specificy command as the name of the SMS_Master_Request class to create.
+		- It is sent to the SMS master, where the specified class is created.
+		- The class then executes ->command().
+		- The class itself is then returned.
+		- And unserialized.
+		- The return value is an instance of the specified SMS_Master_Request subclass.
+		
+		@param		array		$options		A command array.
+		@return		SMS_Master_Request			The completed command.
+		@see		prepare_command for a list of options.
+	**/
+	public function send_command( $options )
+	{
+		$curl = $this->prepare_command( $options );
+		$result = curl_exec( $curl->curl );
+		$result = unserialize( $result );
+		return $result;
 	}
 	
 	/**
@@ -1214,8 +1261,18 @@ class SMS_Master
 			$phone = $this->phones->find_first_available();
 			if ( $phone === false )
 				continue;
+				
+			// Touch the phone and number, to make then inaccessible for a while.
+			$this->phones->touch( $phone->phone_id );
+			$this->numbers->touch( $number->number_id );
 			
-			$curls[] = $this->prepare_send_text( $number, $phone );
+			$curl = $this->prepare_command( array(
+				'command' => 'SMS_Master_Send_Number_Request',
+				'number_id' => $number->number_id,
+				'order_id' => $number->order_id,
+				'phone_id' => $phone->phone_id,
+			) );
+			$curls[] = $curl;
 		}
 		
 		if ( count( $curls ) > 0 )
@@ -1240,7 +1297,6 @@ class SMS_Master
 			foreach( $curls as $index => $curl )
 			{
 				$reply = curl_multi_getcontent( $curl->curl );
-				$reply = base64_decode( $reply );
 				$reply = @unserialize( $reply );
 				if ( $reply !== false )
 					$this->handle_send_reply( $curl, $reply );
@@ -1254,10 +1310,10 @@ class SMS_Master
 			// How about cleaning a little?
 			if ( $this->config['clean']['enabled'] )
 			{
-				$interval = $this->config['cron']['clean']['interval'];
-				if ( $this->ripe_for_cron( 'clean', $interval ) )
+				if ( $this->ripe_for_cron( 'clean' ) )
 				{
-					$this->cron_clean(); 
+					$this->cron_clean();
+					$interval = $this->config['clean']['interval'];
 					$this->touch_cron( 'clean', $interval );
 				}
 			}

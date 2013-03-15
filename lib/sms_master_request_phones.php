@@ -25,6 +25,13 @@ class SMS_Master_Clean_Phone_Request
 	public $phone_id;
 	
 	/**
+		@brief		Empty the phone of messages.
+		@in
+		@var		$empty
+	**/
+	public $empty = true;
+	
+	/**
 		@brief		Output of cleaning commands.
 		@out
 		@var		$output
@@ -41,6 +48,12 @@ class SMS_Master_Clean_Phone_Request
 		// Send cleaning report
 		$clean_data = array( $this->phone_id => $this->output );
 		$this->sms_master->send_cleaning_report( $clean_data );
+	}
+	
+	public function command()
+	{
+		$this->output = $this->sms_master->phones->clean( $this );
+		$this->sms_master->phones->untouch( $this->phone_id );
 	}
 }
 
@@ -174,6 +187,65 @@ class SMS_Master_Identify_Phone_Request
 		$this->output = $this->sms_master->phones->identify( $this->phone_id );
 	}
 }
+
+/**
+	@brief		Sends a command to a phone.
+**/
+class SMS_Master_Send_Number_Request
+	extends SMS_Master_Phone_Request
+{
+	/**
+		@brief		ID of number to send.
+		@in
+		@var		$number_id
+	**/
+	public $number_id;
+
+	/**
+		@brief		ID of phone to send to.
+		@in
+		@var		$phone_id
+	**/
+	public $phone_id;
+
+	/**
+		@brief		Return code from gnokii.
+		@out
+		@var		$code
+	**/
+	public $code;
+
+	/**
+		@brief		Output from exec command.
+		@out
+		@var		$output
+	**/
+	public $output;
+	
+	public function command()
+	{
+		$number = $this->sms_master->numbers->get( $this->number_id );
+		$phone = $this->sms_master->phones->get( $this->phone_id );
+		$slave = $this->sms_master->slaves->get( $phone->slave_id );
+		
+		$text = trim( $number->text );
+		$text_encoding = mb_detect_encoding($text, "ASCII, UTF-8", true);
+		$replacements = array(
+			'"' => "'",
+		);
+		foreach( $replacements as $search => $replace )
+			$text = str_replace( $search, $replace, $text );
+	
+		// Assemble the gammu command line.
+		$phone_command = 'echo \"'.$text.'\" | gnokii --phone ' . $phone->phone_index . ' --sendsms '.trim( $number->number );
+		
+		$command = $this->sms_master->send_slave_command( $slave, $phone_command );
+		
+		$this->code = $command->code;
+		$this->output = $command->output;
+	}
+}
+
 
 /**
 	@brief		Update a phone.

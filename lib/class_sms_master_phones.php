@@ -299,7 +299,8 @@ class class_SMS_Master_Phones
 	**/
 	public function touch( $phone_id )
 	{
-		$this->db->executeUpdate( "UPDATE phones SET touched = now() + INTERVAL 1 MINUTE WHERE `phone_id` = :phone_id",
+		$seconds = $this->sms_master->config[ 'phone_touch_seconds' ];
+		$this->db->executeUpdate( "UPDATE phones SET touched = now() + INTERVAL $seconds SECOND WHERE `phone_id` = :phone_id",
 			array(
 				'phone_id' => $phone_id,
 			)

@@ -59,6 +59,7 @@ class SMS_Master_Status_Request extends SMS_Master_Admin_Request
 	
 	public function handle()
 	{
+		$this->config = $this->sms_master->config;
 		$this->enabled = $this->sms_master->settings->get( 'enabled' );
 		$this->user_count = $this->sms_master->users->count();
 		$this->stats = new stdClass();
@@ -67,6 +68,7 @@ class SMS_Master_Status_Request extends SMS_Master_Admin_Request
 		$this->completed_orders = $this->sms_master->orders->count_completed();
 		$this->uncompleted_orders = $this->sms_master->orders->count_uncompleted();
 		$this->slaves = $this->sms_master->slaves->list_();
+		
 		$this->phones = 0;
 		foreach( $this->slaves as $index => $slave )
 		{
@@ -82,7 +84,6 @@ class SMS_Master_Status_Request extends SMS_Master_Admin_Request
 		}
 		
 		$this->ok = true;
-		
 		if ( $this->phones < 1 )
 			$this->ok = T_( 'No phones are configured' );
 		if ( count( $this->slaves ) < 1 )

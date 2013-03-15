@@ -54,8 +54,6 @@ $config['email']['signature'] = "\n\n--\nSweden Democrat SMS Master";
 $config['public_key'] = file_get_contents( 'sms_master.public.key.php' );
 $config['private_key'] = SMS_Master::load_keyfile( 'sms_master.private.key.php' );
 
-// -------------------------------------- CLEANING --------------------------------------
-
 /**
 	Enable cleaning of phones.
 	
@@ -67,9 +65,9 @@ $config['clean']['enabled'] = true;
 
 /**
 	How long to wait between cleaning runs.
-	Standard is three days.
+	Standard is three days. Just an arbitrary number, really.
 **/
-$config['cron']['clean']['interval'] = 60 * 60 * 24 * 3;
+$config['clean']['interval'] = 60 * 60 * 24 * 3;
 
 // Language and locale to use. The default is English and whatever you find in /lib/locale is fine.
 $config['locale'] = 'en_US.UTF-8';
@@ -79,9 +77,15 @@ $config['locale'] = 'en_US.UTF-8';
 // Each loop has a 0.1 second sleep. Therefore 1000 * 0.1 = 100 idle seconds before quitting.
 $config[ 'max_send_loops' ] = 1000;
 
+// For how many seconds to mark a phone as touched.
+// Sometimes the phones don't respond to gnokii. Having a shorter (15) time means that the phone is
+// retried faster. Longer means that the phone is not used for that amount of time if an error occurs.
+// The author recommends about 30 seconds. Together with using several phones.
+$config[ 'phone_touch_seconds' ] = 30;
+
 // How many times to retry to send the message to a phone before giving up.
-$config['send_retries'] = 3;
-$config['send_retry_delay'] = 60 * 15;	// 15 minutes
+$config['send_retries'] = 60;		// Try 60 times.
+$config['send_retry_delay'] = 60;	// One minute between retries
 
 // Temp directory. Relative to cron.php.
 $config['temp_directory'] = 'temp';

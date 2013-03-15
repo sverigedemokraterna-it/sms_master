@@ -88,7 +88,10 @@ class class_SMS_Master_Settings extends class_SMS_Master_Generic
 		if ( $this->get( $key ) === false )
 			$this->add( $key, $value );
 		else
-			$this->db->update( 'settings', array( '`value`' => $value ), array( '`key`' => $key ) );
+			$this->db->executeQuery( 'UPDATE settings SET `value` = ? WHERE `key` LIKE ?', array(
+				$value,
+				$key
+			));
 	}
 }
 

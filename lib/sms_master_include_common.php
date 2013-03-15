@@ -30,6 +30,11 @@ if ( !function_exists('dbg') )
 	{
 		function dbg($variable)
 		{
+/*	
+			$text = var_export( $variable, true ) . "\n";
+			file_put_contents( '/tmp/sms.log', $text, FILE_APPEND );
+			return;
+*/			
 			echo '<pre>';
 			echo htmlspecialchars( var_dump($variable) );
 			echo '</pre>';
