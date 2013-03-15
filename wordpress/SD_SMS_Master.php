@@ -347,6 +347,36 @@ class SD_SMS_Master
 			}
 		}
 		
+		// Display the config
+		$rv .= '<h3>' . $this->_( 'Configuration' ) . '</h3>';
+		$rv .= '
+			<table class="widefat">
+				<caption>' . $this->_( 'Overview' ) . '</caption>
+				<thead>
+					<tr>
+						<th>' . $this->_( 'Key' ) . '</th>
+						<th>' . $this->_( 'Value' ) . '</th>
+					</tr>
+				</thead>
+				<tbody>
+		';
+		ksort( $result->config );
+		foreach( $result->config as $key => $value )
+		{
+			if ( is_array( $value ) )
+				$value = '<pre>' . var_export( $value, true ) . '</pre>';
+			$rv .= '
+					<tr>
+						<th>' . $key . '</th>
+						<th>' . $this->p( $value ) . '</th>
+					</tr>
+			';
+		}
+		$rv .= '
+				</tbody>
+			</table>
+		';
+		
 		$rv = $this->wrap( $rv, $this->_( 'Overview' ) );
 		
 		echo $rv;
