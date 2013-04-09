@@ -12,7 +12,7 @@ License: GPLv3
 
 if(preg_match('#' . basename(__FILE__) . '#', $_SERVER[ 'PHP_SELF' ])) { die('You are not allowed to call this page directly.'); }
 
-require_once( 'SD_SMS_Master_Base.php' );
+require_once( 'sdk/SD_SMS_Master_Base.php' );
 
 /**
 	@brief		SMS Master plugin for controlling a SMS master server.
@@ -299,39 +299,38 @@ class SD_SMS_Master
 		) );
 		
 		$form = $this->form();
+		$table = $this->table();
 		$rv .= $form->start();
-		$rv .= '
-			<table class="widefat">
-				<caption>' . $this->_( 'Overview' ) . '</caption>
-				<tr>
-					<th>' . $this->_( 'Status' ) . '</th>
-					<td>' . ( $result->ok === true ? $this->_( 'OK' ) : $result->ok ) . '</td>
-				</tr>
-				<tr>
-					<th>' . $this->_( 'Enabled' ) . '</th>
-					<td>
-						' . $this->p( $enabled ? $this->_( 'System is currently switched on.' ) : $this->_( 'System is currently switched off.' ) ) . '
-						' . $this->p( $form->make_input( $switch ) ) . '
-					</td>
-				</tr>
-				<tr>
-					<th><a href="' . $url_view_stats . '" title="' . $this->_( 'View all sent SMS statistics' ) . '">' . $this->_( 'Sent SMSs' ) . '</a></th>
-					<td>' . $result->stats->stat_sent_sms . '</td>
-				</tr>
-				<tr>
-					<th>' . $this->_( 'Completed orders' ) . '</th>
-					<td>' . $result->completed_orders. '</td>
-				</tr>
-				<tr>
-					<th>' . $this->_( 'Uncompleted orders' ) . '</th>
-					<td>' . $result->uncompleted_orders. '</td>
-				</tr>
-				<tr>
-					<th>' . $this->_( 'Users' ) . '</th>
-					<td>' . $result->user_count . '</td>
-				</tr>
-			</table>
-		';
+		
+		$table->caption()->text( $this->_( 'Overview' ) );
+		
+		$row = $table->body()->row();
+		$row->th()->text( $this->_( 'Status' ) );
+		$row->td()->text( ( $result->ok === true ? $this->_( 'OK' ) : $result->ok ) );
+		
+		$row = $table->body()->row();
+		$row->th()->text( $this->_( 'Enabled' ) );
+		$text = $this->p( $enabled ? $this->_( 'System is currently switched on.' ) : $this->_( 'System is currently switched off.' ) )
+			. $this->p( $form->make_input( $switch ) );
+		$row->td()->text( $text );
+		
+		$row = $table->body()->row();
+		$row->th()->textf( '<a href="%s" title="%s">%s</a>', $url_view_stats, $this->_( 'View all sent SMS statistics' ), $this->_( 'Sent SMSs' ) );
+		$row->td()->text( $result->stats->stat_sent_sms );
+		
+		$row = $table->body()->row();
+		$row->th()->text( $this->_( 'Completed orders' ) );
+		$row->td()->text( $result->completed_orders );
+		
+		$row = $table->body()->row();
+		$row->th()->text( $this->_( 'Uncompleted orders' ) );
+		$row->td()->text( $result->uncompleted_orders );
+		
+		$row = $table->body()->row();
+		$row->th()->text( $this->_( 'Users' ) );
+		$row->td()->text( $result->user_count );
+		
+		$rv .= $table;
 		$rv .= $form->stop();
 		
 		foreach( $result->slaves as $slave )
@@ -352,33 +351,22 @@ class SD_SMS_Master
 		
 		// Display the config
 		$rv .= '<h3>' . $this->_( 'Configuration' ) . '</h3>';
-		$rv .= '
-			<table class="widefat">
-				<caption>' . $this->_( 'Overview' ) . '</caption>
-				<thead>
-					<tr>
-						<th>' . $this->_( 'Key' ) . '</th>
-						<th>' . $this->_( 'Value' ) . '</th>
-					</tr>
-				</thead>
-				<tbody>
-		';
+		$table = $this->table();
+		$table->caption()->text( $this->_( 'Settings' ) );
+		$row = $table->head()->row();
+		$row->th()->text( $this->_( 'Key' ) );
+		$row->th()->text( $this->_( 'Value' ) );
+		
 		ksort( $result->config );
 		foreach( $result->config as $key => $value )
 		{
 			if ( is_array( $value ) )
 				$value = '<pre>' . var_export( $value, true ) . '</pre>';
-			$rv .= '
-					<tr>
-						<th>' . $key . '</th>
-						<th>' . $this->p( $value ) . '</th>
-					</tr>
-			';
+			$row = $table->body()->row();
+			$row->td()->text( $key );
+			$row->td()->text( $this->p( $value ) );
 		}
-		$rv .= '
-				</tbody>
-			</table>
-		';
+		$rv .= $table;
 		
 		$rv = $this->wrap( $rv, $this->_( 'Overview' ) );
 		
@@ -667,77 +655,67 @@ class SD_SMS_Master
 		array_unshift( $numbers, $order->number_count );
 		$numbers = implode( "<br />\n", $numbers );
 		
-		$rv = '';
+		$table = $this->table();
 		
-		$rv .= $form->start();
-		$rv .= '
-			<table class="widefat">
-				<tr>
-					<th>' . $this->_( 'Order ID' ) . '</th>
-					<td>' . $order->order_id . '</td>
-				</tr>
-				<tr>
-					<th>' . $this->_( 'Order UUID' ) . '</th>
-					<td>' . $order->order_uuid . '</td>
-				</tr>
-				<tr>
-					<th>' . $this->_( 'Created' ) . '</th>
-					<td>' . $order->datetime_created . '</td>
-				</tr>
-				<tr>
-					<th>' . $this->_( 'Completed' ) . '</th>
-					<td>' . $order->datetime_completed . '</td>
-				</tr>
-				<tr>
-					<th>' . $this->_( 'Numbers' ) . '</th>
-					<td>' . $numbers . '</td>
-				</tr>
-				<tr>
-					<th>' . $this->_( 'Priority' ) . '</th>
-					<td>' . $order->priority . '</td>
-				</tr>
-				<tr>
-					<th>' . $this->_( 'Text' ) . '</th>
-					<td>' . $order->text . '</td>
-				</tr>
-		';
+		$row = $table->body()->row();
+		$row->th()->text( $this->_( 'Order ID' ) );
+		$row->td()->text( $order->order_id );
+		
+		$row = $table->body()->row();
+		$row->th()->text( $this->_( 'Order UUID' ) );
+		$row->td()->text( $order->order_uuid );
+		
+		$row = $table->body()->row();
+		$row->th()->text( $this->_( 'Created' ) );
+		$row->td()->text( $order->datetime_created );
+		
+		$row = $table->body()->row();
+		$row->th()->text( $this->_( 'Completed' ) );
+		$row->td()->text( $order->datetime_completed );
+		
+		$row = $table->body()->row();
+		$row->th()->text( $this->_( 'Numbers' ) );
+		$row->td()->text( $numbers );
+		
+		$row = $table->body()->row();
+		$row->th()->text( $this->_( 'Priority' ) );
+		$row->td()->text( $order->priority );
+		
+		$row = $table->body()->row();
+		$row->th()->text( $this->_( 'Text' ) );
+		$row->td()->text( $order->text );
 		
 		if ( $order->error_log != '' )
-			$rv .= '
-				<tr>
-					<th>' . $this->_( 'Error log' ) . '</th>
-					<td>' . $this->p( $order->error_log ) . '</td>
-				</tr>
-			';
+		{
+			$row = $table->body()->row();
+			$row->th()->text( $this->_( 'Error log' ) );
+			$row->td()->text( $this->p( $order->error_log ) );
+		}
 		
 		if ( $order->email_addresses != '' )
 		{
-			$rv .= '
-				<tr>
-					<th>' . $this->_( 'E-mail addresses for report' ) . '</th>
-					<td>' . $order->email_addresses . '</td>
-				</tr>
-			';
+			$row = $table->body()->row();
+			$row->th()->text( $this->_( 'E-mail addresses for report' ) );
+			$row->td()->text( $order->email_addresses );
+
 			if ( $completed )
 			{
 				$text = $order->email_report_text;
 				$text = base64_decode( $text );
 				$text = unserialize( $text );
 				$text = $this->p( $text[ 'body' ] );
-				$rv .= '
-					<tr>
-						<th>' . $this->_( 'Email report' ) . '</th>
-						<td>' . $text . '</td>
-					</tr>
-					<tr>
-						<th>' . $this->_( 'Email report sent' ) . '</th>
-						<td>' . $order->email_report_sent . '</td>
-					</tr>
-				';
+				
+				$row = $table->body()->row();
+				$row->th()->text( $this->_( 'Email report' ) );
+				$row->td()->text( $text );
+				
+				$row = $table->body()->row();
+				$row->th()->text( $this->_( 'Email report sent' ) );
+				$row->td()->text( $order->email_report_sent );
 			}
 		}
 		
-		$rv .= '</table>';
+		$rv = $table;
 		
 		if ( isset( $result->order_numbers ) )
 		{
@@ -772,38 +750,36 @@ class SD_SMS_Master
 				</div>
 			';
 			
-			$rv .= '<table class="widefat">
-				<caption>' . $this->_( 'Number details' ) . '</caption>
-				<thead>
-					<tr>
-						' . $this->check_column() . '
-						<th>' . $this->_( 'Number' ) . '</th>
-						<th>' . $this->_( 'Failures' ) . '</th>
-						<th>' . $this->_( 'Touched' ) . '</th>
-						<th>' . $this->_( 'Sent' ) . '</th>
-					</tr>
-				</thead>
-				<tbody>
-			';
+			$table = $this->table();
+			$table->caption()->text( $this->_( 'Number details' ) );
+			
+			$row = $table->head()->row();
+			$this->check_column( array(
+				'sd_table_row' => $row,
+			) );
+			$row->th()->text( $this->_( 'Number' ) );
+			$row->th()->text( $this->_( 'Failures' ) );
+			$row->th()->text( $this->_( 'Touched' ) );
+			$row->th()->text( $this->_( 'Sent' ) );
 			
 			foreach( $result->order_numbers as $number )
 			{
+				$row = $table->body()->row();
+				
 				$options = array(
-					'name' => $number->number_id,
 					'checked' => isset( $_POST[ 'cb' ][ $number->number_id ]  ),
+					'name' => $number->number_id,
+					'sd_table_row' => $row,
 				);
 				
-				$rv .= '
-					<tr>
-						' . $this->check_column_body( $options ) . '
-						<td>' . $number->number . '</td>
-						<td>' . $number->failures . '</td>
-						<td>' . $number->touched . '</td>
-						<td>' . $number->sent . '</td>
-					</tr>
-				';
+				$this->check_column_body( $options );
+				$row->td()->text( $number->number );
+				$row->td()->text( $number->failures );
+				$row->td()->text( $number->touched );
+				$row->td()->text( $number->sent );
 			}
-			$rv .= '</tbody></table>';
+			
+			$rv .= $table;
 		}
 		$rv .= $form->stop();
 
@@ -1645,7 +1621,13 @@ class SD_SMS_Master
 		}
 		$rv = '';
 		
-		$t_body = '';
+		$table = $this->table();
+		$table->caption()->text( $this->_( 'Slave overview' ) );
+		
+		$row = $table->head()->row();
+		$row->th()->text( $this->_( 'Description' ) );
+		$row->th()->text( $this->_( 'Connection' ) );
+		
 		foreach( $result->slaves as $slave )
 		{
 			$url_edit = add_query_arg( array(
@@ -1655,33 +1637,19 @@ class SD_SMS_Master
 			$url_delete = add_query_arg( array(
 				'tab' => 'delete',
 			), $url_edit );
-			$t_body .= '
-				<tr>
-					<td><div>' .htmlspecialchars( $slave->slave_description ) . '</div>
-						<div class="row-actions">
-							<a href="'.$url_edit.'" title="'.$this->_( 'Edit the settings of the slave' ).'">'.$this->_( 'Edit' ).'</a>
-							| 
-							<span class="trash"><a href="'.$url_delete.'" title="'.$this->_( 'Delete this slave and its phones' ).'">'.$this->_( 'Delete' ).'</a></span>
-						</div>
-					</td>
-					<td>' .$slave->hostname . ':' . $slave->port . '</td>
-				</tr>
+			$row = $table->body()->row();
+			$text = '<div>' .htmlspecialchars( $slave->slave_description ) . '</div>
+				<div class="row-actions">
+					<a href="'.$url_edit.'" title="'.$this->_( 'Edit the settings of the slave' ).'">'.$this->_( 'Edit' ).'</a>
+					| 
+					<span class="trash"><a href="'.$url_delete.'" title="'.$this->_( 'Delete this slave and its phones' ).'">'.$this->_( 'Delete' ).'</a></span>
+				</div>
 			';
+			$row->td()->text( $text );
+			$row->td()->textf( '%s:%s', $slave->hostname, $slave->port );
 		}
 		
-		$rv .= '<table class="widefat">
-			<caption>' . $this->_( 'Slave overview' ) . '</caption>
-			<thead>
-				<tr>
-					<th>' . $this->_( 'Description' ) . '</th>
-					<th>' . $this->_( 'Connection' ) . '</th>
-				</tr>
-			</thead>
-			<tbody>
-				' . $t_body . '
-			</tbody>
-			</table>
-		';
+		$rv .= $table;
 		
 		$rv .= '<h3>' . $this->_( 'Create a new slave' ) . '</h3>';
 		$rv .= $create;
@@ -1926,7 +1894,13 @@ class SD_SMS_Master
 			return;
 		}
 
-		$t_body = '';
+		$table = $this->table();
+		$table->caption()->text( $this->_( 'User overview' ) );
+		$row = $table->head()->row();
+		$row->th()->text( $this->_( 'Description' ) )->row()
+			->th()->text( $this->_( 'Active' ) )->row()
+			->th()->text( $this->_( 'Administrator' ) );
+			
 		foreach( $result->users as $user )
 		{
 			if ( $user->public_key != $this->get_local_option( 'client_public_key' ) )
@@ -1950,31 +1924,12 @@ class SD_SMS_Master
 				$actions = $this->p_( 'This user cannot be edited or removed because it is being used to connect to the SMS master.' );
 			}
 			
-			$t_body .= '
-				<tr>
-					<td><div>' .$this->p( $user->user_description ) . '</div>
-						' . $actions . '
-					</td>
-					<td>' . $this->yes_no( $user->enabled ) . '</td>
-					<td>' . $this->yes_no( $user->administrator ) . '</td>
-				</tr>
-			';
+			$row = $table->body()->row();
+			$row->td()->textf( '<div>%s</div>%s', $this->p( $user->user_description ), $actions );
+			$row->td()->text( $this->yes_no( $user->enabled ) );
+			$row->td()->text( $this->yes_no( $user->administrator ) );
 		}
-		
-		$rv .= '<table class="widefat">
-			<caption>' . $this->_( 'User overview' ) . '</caption>
-			<thead>
-				<tr>
-					<th>' . $this->_( 'Description' ) . '</th>
-					<th>' . $this->_( 'Active' ) . '</th>
-					<th>' . $this->_( 'Administrator' ) . '</th>
-				</tr>
-			</thead>
-			<tbody>
-				' . $t_body . '
-			</tbody>
-			</table>
-		';
+		$rv .= $table;
 		
 		$create = array(
 			'css_class' => 'button-primary',
@@ -2163,7 +2118,6 @@ class SD_SMS_Master
 		$options = (object)$options;
 		$completed = $options->type == 'completed';
 		$rv = '';
-		$t_body = '';
 		
 		$max_pages = floor( $options->count / $this->page_limit);
 		$page = (isset($_GET['paged']) ? intval( $_GET['paged'] ) : 1);
@@ -2180,6 +2134,15 @@ class SD_SMS_Master
 		
 		if ( $page_links )
 			$page_links = '<div style="width: 50%; float: right;" class="tablenav"><div class="tablenav-pages">' . $page_links . '</div></div>';
+		
+		$table = $this->table();
+		$row = $table->head()->row();
+		$row->th()->text( $this->_( 'Order ID' ) ); 
+		$row->th()->text( $this->_( 'Created' ) );
+		if ( $completed )
+			$row->th()->text( $this->_( 'Completed' ) );
+		$row->th()->text( $this->_( 'Numbers' ) );
+		$row->th()->text( $this->_( 'Text' ) );
 
 		foreach( $options->orders as $order )
 		{
@@ -2198,37 +2161,18 @@ class SD_SMS_Master
 				$order->text
 			);
 			
-			$t_body .= '<tr>';
-			$t_body .= '<td>' . $order->order_id . '</td>';
-			$t_body .= '<td>' . $url . $this->ago( $order->datetime_created ) . '</a></td>';
+			$row = $table->body()->row();
+			
+			$row->td()->text( $order->order_id );
+			$row->td()->text( $url . $this->ago( $order->datetime_created ) );
 			if ( $completed )
-				$t_body .= '<td>' . $this->ago( $order->datetime_completed ) . '</td>';
-			$t_body .= '<td>' . $numbers . '</td>';
-			$t_body .= '<td>' . $text_and_url . '</td>';
-			$t_body .= '</tr>';
+				$row->td()->text( $this->ago( $order->datetime_completed ) );
+			$row->td()->text( $numbers );
+			$row->td()->text( $text_and_url );
 		}
 		
 		$rv .= $page_links;
-		$rv .= '
-			<table class="widefat">
-				<thead>
-					<tr>
-						<th>' . $this->_( 'Order ID' ) . '</th>
-						<th>' . $this->_( 'Created' ) . '</th>
-		';
-		if ( $completed )
-			$rv .= '<th>' . $this->_( 'Completed' ) . '</th>';
-		$rv .= '
-						<th>' . $this->_( 'Numbers' ) . '</th>
-						<th>' . $this->_( 'Text' ) . '</th>
-					</tr>
-				</thead>
-				<tbody>
-					' . $t_body . '
-				</tbody>
-			</table>
-		';
-		
+		$rv .= $table;		
 		$rv .= $page_links;
 		
 		return $rv;
@@ -2244,34 +2188,31 @@ class SD_SMS_Master
 		
 		$rv = '';
 		
-		$rv .= '
-			<table class="widefat">
-				<caption>' . $this->_( 'Phone' ) . ': ' . $phone->phone_id . '</caption>
-				<tr>
-					<th>' . $this->_( 'Description' ) . '</th>
-					<td>' . $this->p( $phone->phone_description ) . '</td>
-				</tr>
-				<tr>
-					<th>' . $this->_( 'Phone index' ) . '</th>
-					<td>' . $phone->phone_index . '</td>
-				</tr>
-				<tr>
-					<th>' . $this->_( 'Enabled' ) . '</th>
-					<td>' . $this->yes_no( $phone->enabled ) . '</td>
-				</tr>
-				<tr>
-					<th>' . $this->_( 'Clean' ) . '</th>
-					<td>' . $this->yes_no( $phone->clean ) . '</td>
-				</tr>
-				<tr>
-					<th>' . $this->_( 'Touched' ) . '</th>
-					<td>' . $phone->touched . '</td>
-				</tr>
-				<tr>
-					<th>' . $this->_( 'Touched successfully' ) . '</th>
-					<td>' . $phone->touched_successfully . '</td>
-				</tr>
-		';
+		$table = $this->table();
+		$table->caption()->text( $this->_( 'Phone' ) . ': ' . $phone->phone_id );
+		$table->body()->row()
+			->th()->text( $this->_( 'Description' ) )->row()
+			->td()->text( $this->p( $phone->phone_description ) );
+		
+		$table->body()->row()
+			->th()->text( $this->_( 'Phone index' ) )->row()
+			->td()->text( $phone->phone_index );
+		
+		$table->body()->row()
+			->th()->text( $this->_( 'Enabled' ) )->row()
+			->td()->text( $this->yes_no( $phone->enabled ) );
+		
+		$table->body()->row()
+			->th()->text( $this->_( 'Clean' ) )->row()
+			->td()->text( $this->yes_no( $phone->clean ) );
+		
+		$table->body()->row()
+			->th()->text( $this->_( 'Touched' ) )->row()
+			->td()->text( $phone->touched );
+		
+		$table->body()->row()
+			->th()->text( $this->_( 'Touched successfully' ) )->row()
+			->td()->text( $phone->touched_successfully );
 		
 		if ( $options->display_sent_stats )
 		{
@@ -2305,15 +2246,12 @@ class SD_SMS_Master
 				$year--;
 			}
 
-			$rv .= '
-					<tr>
-						<th>' . $this->_( 'Sent messages' ) . '</th>
-						<td>' . $sent . '</td>
-					</tr>
-			';
+			$table->body()->row()
+				->th()->text( $this->_( 'Sent messages' ) )->row()
+				->td()->text( $sent );
 		}
 		
-		$rv .= '</table>';
+		$rv .= $table;
 		
 		if ( $options->display_delete_link )
 		{

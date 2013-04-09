@@ -179,9 +179,13 @@ require_once ( 'class_sms_master_numbers.php' );
 	
 	@section	smsm_changelog					Changelog
 	
-	@par		x.x 2013-xx-xx
+	@par		2013-04-09
 	
-	- @b Fix: Phone statistics work again
+	- @b Fix: Wordpress plugin has updated sdk.
+	
+	@par		2013-03-19
+	
+	- @b Fix: Phone does not get untouched when no route.
 	
 	@par		1.0 2013-03-14
 	
@@ -189,8 +193,7 @@ require_once ( 'class_sms_master_numbers.php' );
 	
 	@section	smsm_development				Development
 	
-	See the <a href="https://it.sverigedemokraterna.se/program/sms-master/">SD SMS Master project page</a> for download links
-	and links to the git.
+	The <a href="https://github.com/sverigedemokraterna-it/sms_master">github repository</a> contains all necessary files.
 	
 	The project author welcomes translations.
 	
@@ -678,6 +681,7 @@ class SMS_Master
 				$number = $this->numbers->get( $number_id );
 				$this->orders->log_error( $order_id, date('Y-m-d H:i:s ') . "\n\tPhone: " . $phone_id . "\n\tNumber: " . $number->number . "\n\t" . implode("\n\t", $reply->output) . "\n" );
 				$this->numbers->increase_fails( $number_id );
+				$this->phones->untouch( $phone_id );
 			}
 		}
 		else
@@ -686,8 +690,8 @@ class SMS_Master
 			$this->numbers->untouch( $number_id );
 			$this->phones->increase_sent_stats( $phone_id );
 			$this->phones->touch_successfully( $phone_id );
+			$this->phones->untouch( $phone_id );
 		}
-		$this->phones->untouch( $phone_id );
 		$this->orders->maybe_complete( $order_id );
 	}
 	

@@ -28,6 +28,9 @@ Full documentation can be found by downloading the lib part from the plugin site
 
 == Changelog ==
 
+= 1.3 xxxxxxxxxx =
+* Fix: Code refactor. Uses sd_table for tables.
+
 = 1.2 2013-03-18 =
 * Fix: Update GIT clone/pull code and repository location.
 
